@@ -7,6 +7,7 @@
         body {
             margin: 0;
             font-family: "Comic Sans MS", sans-serif;
+            user-select: none;
         }
         .main-wrapper {
             display: flex;
@@ -19,70 +20,141 @@
             height: 100%;
             max-width: 800px;
             max-height: 300px;
-            background: #eefaff;
-            border-radius: 50px;
-            border: 1px dashed #cfcfcf;
+            background: #f9fffb;
+            border: 1px dashed #363434;
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
+        }
+        .drop-target__bar {
+            position: absolute;
+            background: bisque;
+            width: 0;
+            height: 100%;
+            left: 0;
         }
         .drop-target__text {
-            color: #888d8f;
-            font-size: 12px;
+            color: #363434;
+            position: absolute;
+        }
+        #canvas-target {
+            position: absolute;
+            opacity: 0.1;
         }
     </style>
+    <script src="gif.js"></script>
 </head>
 <body>
 <div class="main-wrapper">
     <div id="drop-target">
+        <div class="drop-target__bar"></div>
+        <canvas id="canvas-target"></canvas>
         <div class="drop-target__text">
             Drop a static image here (JPG or PNG)
         </div>
     </div>
 </div>
-
 </body>
 <script>
-  const MAX_HEIGHT = 100;
+  document.addEventListener("DOMContentLoaded", function() {
+    const MAX_HEIGHT = 100;
+    const DROP_TARGET = "#drop-target";
+    const CANVAS_TARGET = "#canvas-target";
+    const FAKE_PROCESS = ".drop-target__bar";
 
-  let target = document.getElementById("drop-target");
-  target.addEventListener("dragover", function(e){e.preventDefault();}, true);
-  target.addEventListener("drop", function(e){
-    e.preventDefault();
-    loadImage(e.dataTransfer.files[0]);
-  }, true);
+    let target = document.querySelector(DROP_TARGET);
+    target.addEventListener("dragover", function(e){e.preventDefault();}, true);
+    target.addEventListener("drop", function(e){
+      e.preventDefault();
+      loadImage(e.dataTransfer.files[0]);
+    }, true);
 
-  function loadImage(src){
-    //	Prevent any non-image file type from being read.
-    if(!src.type.match(/image.*/)){
-      console.log("The dropped file is not an image: ", src.type);
-      return;
+    function loadImage(src){
+      // Prevent any non-image file type from being read.
+      if(!src.type.match(/image.*/)){
+        console.log("The dropped file is not an image: ", src.type);
+        return;
+      }
+
+      // Create our FileReader and run the results through the render function.
+      let reader = new FileReader();
+      reader.onload = function(e){
+        render(e.target.result);
+      };
+      reader.readAsDataURL(src);
     }
 
-    //	Create our FileReader and run the results through the render function.
-    let reader = new FileReader();
-    reader.onload = function(e){
-      render(e.target.result);
-    };
-    reader.readAsDataURL(src);
-  }
+    function render(src){
+      let image = new Image();
+      image.src = src;
 
-  function render(src){
-    let image = new Image();
-    image.onload = function(){
-      let canvas = document.getElementById("drop-target");
+      image.onload = function(){
+        let canvas, ctx;
+        [canvas, ctx] = initiateCanvas(CANVAS_TARGET, image);
+
+        const gif = new GIF({
+          workers: 2,
+          quality: 10,
+          background: '#fff',
+          transparent: '#000',
+          dither: true
+        });
+
+        const processBar = document.querySelector(".drop-target__bar");
+        const factors = [1, 0.99, 0.98, 0.96, 0.955, 0.955, 0.96, 0.97, 0.975, 0.98, 0.985, 0.99, 1, 1, 1, 1, 1, 1, 1];
+        const factorLength = factors.length;
+
+        let counter = 0;
+        const i = setInterval(() => {
+          const factor = factors[counter];
+          clearCanvas(ctx, canvas);
+          drawImage(ctx, image, factor);
+          gif.addFrame(canvas, {
+            copy: true,
+            delay: 1
+          });
+          processBar.style.width = (counter / factorLength * 100) + "%";
+          counter++;
+          if (counter === factorLength) {
+            clearInterval(i);
+            gif.on('finished', function(blob) {
+              processBar.style.width = "100%";
+              window.open(URL.createObjectURL(blob));
+            });
+            gif.render();
+          }
+        }, 10);
+      };
+    }
+
+    function clearCanvas(ctx, canvas) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawImage(ctx, image, factor) {
+      ctx.transform(1, 0, 0, factor, 0, 0);
+      ctx.translate(0, image.height * (1 - factor) / factor);
+      ctx.drawImage(image, 0, 0, image.width, image.height);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+
+    function initiateCanvas(CANVAS_TARGET, image) {
+      let canvas = document.querySelector(CANVAS_TARGET);
       if(image.height > MAX_HEIGHT) {
         image.width *= MAX_HEIGHT / image.height;
         image.height = MAX_HEIGHT;
       }
       let ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      clearCanvas(ctx, canvas);
       canvas.width = image.width;
       canvas.height = image.height;
-      ctx.drawImage(image, 0, 0, image.width, image.height);
-    };
-    image.src = src;
-  }
+
+      return [canvas, ctx];
+    }
+  });
+
+
 
 </script>
 </html>
