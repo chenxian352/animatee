@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Animatee</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
         body {
             margin: 0;
@@ -30,7 +31,7 @@
         }
         .drop-target__bar {
             position: absolute;
-            background: bisque;
+            background: #E6FFDE;
             width: 0;
             height: 100%;
             left: 0;
@@ -58,10 +59,11 @@
         <div class="drop-target__bar"></div>
         <canvas id="canvas-target"></canvas>
         <div class="drop-target__text">
-            <div>Drop a static image here (JPG or PNG)</div>
+            <div>Drop or click to upload a static image here</div>
             <small class="drop-target__text__small">Please disable Ads/Popout blocker as it needs to pop out the gif.</small>
         </div>
     </div>
+    <input type="file" id="file-target" style="display: none;" />
 </div>
 </body>
 <script>
@@ -69,14 +71,40 @@
     const MAX_HEIGHT = 100;
     const DROP_TARGET = "#drop-target";
     const CANVAS_TARGET = "#canvas-target";
+    const FILE_TARGET = "#file-target";
     const FAKE_PROCESS = ".drop-target__bar";
 
-    let target = document.querySelector(DROP_TARGET);
-    target.addEventListener("dragover", function(e){e.preventDefault();}, true);
-    target.addEventListener("drop", function(e){
+    const processBar = document.querySelector(FAKE_PROCESS);
+    const factors = [1, 0.99, 0.98, 0.96, 0.955, 0.955, 0.96, 0.97, 0.975, 0.98, 0.985, 0.99, 1, 1, 1, 1, 1, 1, 1];
+    const factorLength = factors.length;
+
+    let dropTarget = document.querySelector(DROP_TARGET);
+    let fileTarget = document.querySelector(FILE_TARGET);
+
+    dropTarget.addEventListener("dragover", (e) => {e.preventDefault();}, true);
+    dropTarget.addEventListener("drop", (e) => {
       e.preventDefault();
       loadImage(e.dataTransfer.files[0]);
     }, true);
+    dropTarget.addEventListener("dragenter", (e) => {
+      console.log(e.target);
+      if (e.target.id === DROP_TARGET.substr(1)) {
+        e.target.style.backgroundColor = "bisque";
+      }
+    }, false);
+    dropTarget.addEventListener("dragleave", (e) => {
+      if (e.target.id === DROP_TARGET.substr(1)) {
+        e.target.style.backgroundColor = "#f9fffb";
+      }
+    }, false);
+    dropTarget.addEventListener("click", (e) => {
+      fileTarget.click();
+    }, false);
+
+    fileTarget.addEventListener("change", (e) => {
+      e.preventDefault();
+      loadImage(e.target.files[0]);
+    }, false);
 
     function loadImage(src){
       // Prevent any non-image file type from being read.
@@ -108,10 +136,6 @@
           transparent: '#000',
           dither: true
         });
-
-        const processBar = document.querySelector(".drop-target__bar");
-        const factors = [1, 0.99, 0.98, 0.96, 0.955, 0.955, 0.96, 0.97, 0.975, 0.98, 0.985, 0.99, 1, 1, 1, 1, 1, 1, 1];
-        const factorLength = factors.length;
 
         let counter = 0;
         const i = setInterval(() => {
