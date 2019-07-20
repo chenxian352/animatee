@@ -41,14 +41,12 @@
             position: absolute;
             text-align: center;
         }
-        .drop-target__text__small {
-            margin-top: 20px;
-            display: inline-block;
-            opacity: 0.5;
-        }
         #canvas-target {
             position: absolute;
             opacity: 0.1;
+        }
+        #result-target {
+            position: absolute;
         }
     </style>
     <script src="gif.js"></script>
@@ -60,7 +58,9 @@
         <canvas id="canvas-target"></canvas>
         <div class="drop-target__text">
             <div>Drop or click to upload a static image here</div>
-            <small class="drop-target__text__small">Please disable Ads/Popout blocker as it needs to pop out the gif.</small>
+        </div>
+        <div id="result-target">
+            <img src="" alt="">
         </div>
     </div>
     <input type="file" id="file-target" style="display: none;" />
@@ -73,6 +73,7 @@
     const CANVAS_TARGET = "#canvas-target";
     const FILE_TARGET = "#file-target";
     const FAKE_PROCESS = ".drop-target__bar";
+    const RESULT_TARGET = "#result-target img";
 
     const processBar = document.querySelector(FAKE_PROCESS);
     const factors = [1, 0.99, 0.98, 0.96, 0.955, 0.955, 0.96, 0.97, 0.975, 0.98, 0.985, 0.99, 1, 1, 1, 1, 1, 1, 1];
@@ -152,7 +153,7 @@
             clearInterval(i);
             gif.on('finished', function(blob) {
               processBar.style.width = "100%";
-              window.open(URL.createObjectURL(blob));
+              document.querySelector(RESULT_TARGET).src = URL.createObjectURL(blob);
             });
             gif.render();
           }
